@@ -1,16 +1,16 @@
 # ip.nosqd.dev
 
 > A blazingly fast IP information service written in Rust.
-Inspired by ipinfo.io, but designed to be minimal, dependency-light, and easily self-hostable via Nix.
+Inspired by ipinfo.io, but designed to be minimal, dependency-light, and easily self-hostable via Docker.
 
 ## Usage
 
 ### Browser
-Simply visit `https://ip.nosqd.dev` in your browser.
+Simply visit <a href="https://ip.nosqd.dev">https://ip.nosqd.dev</a> in your browser.
 
 ### CLI (JSON)
 ```bash
-$ curl ip.nosqd.dev
+$ curl -L ip.nosqd.dev
 {
   "ip": "1.1.1.1",
   "city": "Brisbane",
@@ -31,7 +31,7 @@ docker run -p 3000:3000 ghcr.io/nosqd/ip.nosqd.dev:latest
 
 ### Using Nix
 ```bash
-nix run github:nosqd/ip-nosqd
+nix run github:nosqd/ip.nosqd.dev
 ```
 
 ### Environment Variables

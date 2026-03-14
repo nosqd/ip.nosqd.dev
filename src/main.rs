@@ -133,7 +133,7 @@ fn render_html(data: IpResponse) -> String {
 > Location: {flag} {city}, {country}
 > ASN: AS{asn} ({asn_org})
 <br>
-> Try: <code>curl ip.nosqd.dev</code>
+> Try: <code>curl -L ip.nosqd.dev</code>
 > Built with Rust & Nix • <a href="https://github.com/nosqd/ip.nosqd.dev" style="text-decoration: none; color: #458588;">GitHub</a>
         </pre>
         </body>
