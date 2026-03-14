@@ -37,7 +37,7 @@ async fn main() {
 
     let cors_layer = CorsLayer::new()
         .allow_methods(Any)
-        .allow_origin("http://localhost:4001".parse::<HeaderValue>().unwrap())
+        .allow_origin("*".parse::<HeaderValue>().unwrap())
         .allow_headers([ACCEPT, CONTENT_TYPE]);
     let app = Router::new()
         .route("/", get(root))
