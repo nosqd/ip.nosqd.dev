@@ -101,7 +101,12 @@ async fn root(
     let parser = Parser::new();
     let is_browser = parser
         .parse(ua_string)
-        .map(|result| matches!(result.category, "pc" | "smartphone" | "mobilephone"))
+        .map(|result| {
+            matches!(
+                result.category,
+                "pc" | "smartphone" | "mobilephone" | "crawler"
+            )
+        })
         .unwrap_or(false);
 
     if accept_header.contains("application/json") {
@@ -121,6 +126,18 @@ fn render_html(data: IpResponse) -> String {
         <head>
             <title>nosqd's IP info</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta name="title" content="nosqd's IP info">
+            <meta name="description" content="A blazingly fast IP information service written in Rust.">
+            <meta name="theme-color" content="\#485588">
+
+            <meta property="og:type" content="website">
+            <meta property="og:url" content="https://ip.nosqd.dev/">
+            <meta property="og:title" content="nosqd's IP info">
+            <meta property="og:description" content="A blazingly fast IP information service written in Rust.">
+
+            <meta property="twitter:card" content="summary">
+            <meta property="twitter:title" content="nosqd's IP info">
+            <meta property="twitter:description" content="A blazingly fast IP information service written in Rust.">
             <style>
                 body {{ background: #282828; color: #ebdbb2; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 24px; }}
             </style>
