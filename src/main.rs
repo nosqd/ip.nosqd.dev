@@ -1,9 +1,12 @@
+use axum::http::HeaderMap;
+use axum::response::{Html, IntoResponse, Response};
 use axum::{Json, Router, extract::State, routing::get};
 use axum_client_ip::XRealIp as ClientIp;
 use maxminddb::{Reader, geoip2};
 use serde::Serialize;
 use std::env;
 use std::sync::Arc;
+use woothee::parser::Parser;
 
 struct AppState {
     city: Reader<maxminddb::Mmap>,
@@ -11,7 +14,7 @@ struct AppState {
 }
 
 #[derive(Serialize)]
-struct Response {
+struct IpResponse {
     ip: String,
     city: Option<String>,
     country: Option<String>,
@@ -41,7 +44,11 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn root(ClientIp(ip): ClientIp, State(state): State<Arc<AppState>>) -> Json<Response> {
+async fn root(
+    ClientIp(ip): ClientIp,
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Response {
     let city_data = state
         .city
         .lookup(ip)
@@ -55,7 +62,7 @@ async fn root(ClientIp(ip): ClientIp, State(state): State<Arc<AppState>>) -> Jso
 
     let country_code = city_data.as_ref().and_then(|c| c.country.iso_code);
 
-    Json(Response {
+    let data = IpResponse {
         ip: ip.to_string(),
 
         city: city_data
@@ -79,5 +86,64 @@ async fn root(ClientIp(ip): ClientIp, State(state): State<Arc<AppState>>) -> Jso
                 .filter_map(|ch| char::from_u32(ch as u32 + 127397))
                 .collect()
         }),
-    })
+    };
+
+    let accept_header = headers
+        .get("accept")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let ua_string = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let parser = Parser::new();
+    let is_browser = parser
+        .parse(ua_string)
+        .map(|result| matches!(result.category, "pc" | "smartphone" | "mobilephone"))
+        .unwrap_or(false);
+
+    if accept_header.contains("application/json") {
+        Json(data).into_response()
+    } else if is_browser || accept_header.contains("text/html") {
+        Html(render_html(data)).into_response()
+    } else {
+        Json(data).into_response()
+    }
+}
+
+fn render_html(data: IpResponse) -> String {
+    format!(
+        r#"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>nosqd's IP info</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body {{ background: #282828; color: #ebdbb2; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 24px; }}
+            </style>
+        </head>
+        <body class="flex flex-col items-center justify-center min-h-screen p-4">
+        <pre>
+> Hello from nosqd's IP information service.
+<br>
+> IP: {ip}
+> Location: {flag} {city}, {country}
+> ASN: AS{asn} ({asn_org})
+<br>
+> Try: <code>curl ip.nosqd.dev</code>
+> Built with Rust & Nix • <a href="https://github.com/nosqd/ip.nosqd.dev" style="text-decoration: none; color: #458588;">GitHub</a>
+        </pre>
+        </body>
+        </html>
+        "#,
+        ip = data.ip,
+        flag = data.flag.unwrap_or_default(),
+        city = data.city.unwrap_or_else(|| "Unknown".to_string()),
+        country = data.country.unwrap_or_else(|| "Unknown".to_string()),
+        asn = data.asn.unwrap_or(0),
+        asn_org = data.asn_org.unwrap_or_else(|| "Unknown".to_string()),
+    )
 }
