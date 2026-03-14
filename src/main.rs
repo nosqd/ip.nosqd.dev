@@ -1,4 +1,5 @@
-use axum::http::HeaderMap;
+use axum::http::header::{ACCEPT, CONTENT_TYPE};
+use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{Html, IntoResponse, Response};
 use axum::{Json, Router, extract::State, routing::get};
 use axum_client_ip::XRealIp as ClientIp;
@@ -6,6 +7,7 @@ use maxminddb::{Reader, geoip2};
 use serde::Serialize;
 use std::env;
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use woothee::parser::Parser;
 
 struct AppState {
@@ -33,7 +35,14 @@ async fn main() {
         asn: unsafe { Reader::open_mmap(&asn_path).expect("ASN DB missing") },
     });
 
-    let app = Router::new().route("/", get(root)).with_state(state);
+    let cors_layer = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_origin("http://localhost:4001".parse::<HeaderValue>().unwrap())
+        .allow_headers([ACCEPT, CONTENT_TYPE]);
+    let app = Router::new()
+        .route("/", get(root))
+        .with_state(state)
+        .layer(cors_layer);
 
     let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
